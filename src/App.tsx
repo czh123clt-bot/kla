@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PlayingCard, ARSettings, QuadCorners, CapturedPhoto } from './types';
 import { generateFullDeck, wrapImageInCardFrame } from './utils/cardGenerator';
+import { recompositeCapturedPhoto } from './utils/arEngine';
 import { CameraView } from './components/CameraView';
 import { SettingsModal } from './components/SettingsModal';
 import { PhotoGalleryModal } from './components/PhotoGalleryModal';
@@ -23,8 +24,8 @@ export function App() {
     ambientColorMatch: true,
     edgeFeather: 2,
     contrastBoost: 1.0,
-    autoDetectWhiteCard: false,
-    showCornerHandles: true,
+    autoDetectWhiteCard: true,
+    showCornerHandles: false, // Default off: no dashed bounding boxes
     lockAspectRatio: true,
     cardScale: 1.0,
   });
@@ -90,9 +91,23 @@ export function App() {
   };
 
   // Update Photo Card Retroactively
-  const handleUpdatePhotoCard = (photoId: string, newCard: PlayingCard) => {
+  const handleUpdatePhotoCard = async (photoId: string, newCard: PlayingCard) => {
+    const photoToUpdate = savedPhotos.find((p) => p.id === photoId);
+    if (!photoToUpdate) return;
+
+    const newCompositeUrl = await recompositeCapturedPhoto(
+      photoToUpdate.originalDataUrl,
+      newCard.dataUrl,
+      photoToUpdate.corners,
+      photoToUpdate.blendSettings
+    );
+
     setSavedPhotos((prev) =>
-      prev.map((p) => (p.id === photoId ? { ...p, cardName: newCard.name } : p))
+      prev.map((p) =>
+        p.id === photoId
+          ? { ...p, cardName: newCard.name, compositeDataUrl: newCompositeUrl }
+          : p
+      )
     );
   };
 

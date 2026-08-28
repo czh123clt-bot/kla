@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PlayingCard, ARSettings, QuadCorners, Point2D, CapturedPhoto } from '../types';
 import { processARFrame } from '../utils/arEngine';
-import { detectWhiteCardCorners } from '../utils/whiteCardDetector';
+import { detectWhiteCardCorners, detectWhiteCardAtPoint } from '../utils/whiteCardDetector';
 import { generateCardSVG } from '../utils/cardGenerator';
 import { Camera, RefreshCw, Sliders, Maximize, Minimize, Flashlight, Image as ImageIcon, Sparkles, CheckCircle2 } from 'lucide-react';
 
@@ -286,7 +286,10 @@ export const CameraView: React.FC<CameraViewProps> = ({
     ctx.restore();
   };
 
-  // Pointer/Touch Dragging Event Handlers for Quad Corners & Center Box
+  // Touch / Click Ripple feedback state
+  const [tapRipple, setTapRipple] = useState<{ x: number; y: number; id: number } | null>(null);
+
+  // Pointer/Touch Dragging Event Handlers & Click-to-Detect White Card
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -298,29 +301,46 @@ export const CameraView: React.FC<CameraViewProps> = ({
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
 
-    // Check hit test on 4 corner handles (radius 28px hit target)
-    const points: Array<{ key: keyof QuadCorners; p: Point2D }> = [
-      { key: 'topLeft', p: corners.topLeft },
-      { key: 'topRight', p: corners.topRight },
-      { key: 'bottomRight', p: corners.bottomRight },
-      { key: 'bottomLeft', p: corners.bottomLeft },
-    ];
+    // Visual ripple effect at tap position
+    setTapRipple({ x: e.clientX, y: e.clientY, id: Date.now() });
+    setTimeout(() => setTapRipple(null), 600);
 
-    for (const pt of points) {
-      const dist = Math.hypot(clickX - pt.p.x, clickY - pt.p.y);
-      if (dist < 32) {
-        setActiveDragPoint(pt.key);
+    // If manual corner handles are enabled, check if user clicked a handle first
+    if (settings.showCornerHandles) {
+      const points: Array<{ key: keyof QuadCorners; p: Point2D }> = [
+        { key: 'topLeft', p: corners.topLeft },
+        { key: 'topRight', p: corners.topRight },
+        { key: 'bottomRight', p: corners.bottomRight },
+        { key: 'bottomLeft', p: corners.bottomLeft },
+      ];
+
+      for (const pt of points) {
+        const dist = Math.hypot(clickX - pt.p.x, clickY - pt.p.y);
+        if (dist < 32) {
+          setActiveDragPoint(pt.key);
+          dragStartRef.current = { x: clickX, y: clickY, initialCorners: { ...corners } };
+          return;
+        }
+      }
+
+      const cx = (corners.topLeft.x + corners.bottomRight.x) / 2;
+      const cy = (corners.topLeft.y + corners.bottomRight.y) / 2;
+      if (Math.hypot(clickX - cx, clickY - cy) < 120) {
+        setActiveDragPoint('center');
         dragStartRef.current = { x: clickX, y: clickY, initialCorners: { ...corners } };
         return;
       }
     }
 
-    // Check if clicked inside box center region
-    const cx = (corners.topLeft.x + corners.bottomRight.x) / 2;
-    const cy = (corners.topLeft.y + corners.bottomRight.y) / 2;
-    if (Math.hypot(clickX - cx, clickY - cy) < 120) {
-      setActiveDragPoint('center');
-      dragStartRef.current = { x: clickX, y: clickY, initialCorners: { ...corners } };
+    // Direct click/tap on white card: detect card quadrilateral around click point
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (ctx) {
+      const detectedQuad = detectWhiteCardAtPoint(ctx, canvas.width, canvas.height, clickX, clickY);
+      if (detectedQuad) {
+        setCorners(detectedQuad);
+        setToastMessage(`已对准贴合 "${selectedCard.name}"`);
+        setTimeout(() => setToastMessage(''), 2000);
+      }
     }
   };
 
@@ -451,6 +471,15 @@ export const CameraView: React.FC<CameraViewProps> = ({
         onPointerLeave={handlePointerUp}
         className="w-full h-full object-cover cursor-crosshair touch-none"
       />
+
+      {/* Touch/Click Ripple Feedback */}
+      {tapRipple && (
+        <div
+          key={tapRipple.id}
+          style={{ left: tapRipple.x, top: tapRipple.y }}
+          className="fixed z-30 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border-2 border-white/90 bg-white/30 animate-ping pointer-events-none"
+        />
+      )}
 
       {/* Camera Flash Animation Effect */}
       {flashActive && (

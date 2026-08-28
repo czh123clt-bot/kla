@@ -41,10 +41,10 @@ export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#050505]">
           <div className="flex items-center gap-3">
-            <div className="text-[9px] uppercase tracking-[0.2em] font-mono-hud text-white/40">GALLERY ARCHIVE</div>
-            <h3 className="text-xs font-mono-hud font-bold text-white uppercase tracking-wider">Captured AR Photographs</h3>
+            <div className="text-[9px] uppercase tracking-[0.2em] font-mono-hud text-white/40">相册归档</div>
+            <h3 className="text-xs font-mono-hud font-bold text-white uppercase tracking-wider">扑克牌 AR 拍照片</h3>
             <span className="px-2 py-0.5 rounded-sm bg-white/10 text-[10px] font-mono-hud text-white border border-white/20">
-              {photos.length} RECORDS
+              {photos.length} 张照片
             </span>
           </div>
           <button
@@ -80,7 +80,7 @@ export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({
                 {/* Badge Overlay */}
                 <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 backdrop-blur-md px-3 py-1 rounded-sm text-[10px] font-bold text-white border border-white/20 flex items-center gap-1.5 shadow-lg tracking-wider uppercase">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {showOriginal ? 'RAW PHYSICAL CAMERA STREAM' : `IMPRINTED: ${currentPhoto.cardName}`}
+                  {showOriginal ? '未印制原始物理相机画面' : `物理印制效果: ${currentPhoto.cardName}`}
                 </div>
               </div>
 
@@ -108,7 +108,7 @@ export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({
               {/* Actions & Detail */}
               <div className="space-y-4 text-xs">
                 <div className="space-y-1 border-b border-white/10 pb-3">
-                  <div className="text-[9px] text-white/40 uppercase tracking-widest">CAPTURED TIMESTAMP</div>
+                  <div className="text-[9px] text-white/40 uppercase tracking-widest">拍摄时间</div>
                   <div className="text-xs font-bold text-white">
                     {new Date(currentPhoto.timestamp).toLocaleString('zh-CN')}
                   </div>
@@ -123,12 +123,12 @@ export const PhotoGalleryModal: React.FC<PhotoGalleryModalProps> = ({
                   className="w-full py-2.5 rounded-sm bg-white/5 hover:bg-white/15 text-white text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 border border-white/20 active:scale-98 transition-all"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  HOLD TO COMPARE PHYSICAL CARD
+                  按住对比无图案白卡
                 </button>
 
                 {/* Switch Card on Photo */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider">SWAP PATTERN</label>
+                  <label className="text-[10px] font-bold text-white/60 uppercase tracking-wider">更换照片上的牌型</label>
                   <select
                     value={cards.find((c) => c.name === currentPhoto.cardName)?.id || ''}
                     onChange={(e) => {

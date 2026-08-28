@@ -136,13 +136,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Auto Detect White Card */}
             <label className="flex items-center justify-between p-3 rounded-sm bg-[#050505] border border-white/10 cursor-pointer hover:bg-white/5 transition-colors">
               <div className="space-y-0.5">
-                <div className="text-xs font-bold text-white uppercase tracking-wider">Auto Corner Alignment Snap</div>
-                <div className="text-[10px] text-white/40">Detect white card boundaries & snap vertex points</div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider">点击/自动白色卡片对准</div>
+                <div className="text-[10px] text-white/40">点击或自动识别画面中白色卡片边界并贴合</div>
               </div>
               <input
                 type="checkbox"
                 checked={settings.autoDetectWhiteCard}
                 onChange={(e) => onUpdateSettings({ autoDetectWhiteCard: e.target.checked })}
+                className="w-4 h-4 accent-white rounded-none cursor-pointer"
+              />
+            </label>
+
+            {/* Show Corner Handles Option */}
+            <label className="flex items-center justify-between p-3 rounded-sm bg-[#050505] border border-white/10 cursor-pointer hover:bg-white/5 transition-colors">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-white uppercase tracking-wider">显示手动虚框与调节点</div>
+                <div className="text-[10px] text-white/40">开启后可手动拖拽虚框四个顶点 (默认关闭)</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.showCornerHandles}
+                onChange={(e) => onUpdateSettings({ showCornerHandles: e.target.checked })}
                 className="w-4 h-4 accent-white rounded-none cursor-pointer"
               />
             </label>

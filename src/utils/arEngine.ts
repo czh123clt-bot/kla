@@ -175,9 +175,24 @@ export function processARFrame(
     let outB = cb;
 
     if (mode === 'multiply') {
-      outR = (cr * shadowFactor * (settings.ambientColorMatch ? avgR / 255 : 1));
-      outG = (cg * shadowFactor * (settings.ambientColorMatch ? avgG / 255 : 1));
-      outB = (cb * shadowFactor * (settings.ambientColorMatch ? avgB / 255 : 1));
+      // Physical ink spectral filter model: ink absorbs light while reflecting paper's exact ambient light, shadows, & color cast
+      // Pure white card background (255,255,255) becomes 100% identical to (camR, camG, camB)
+      // Printed ink (red/black suit numbers & symbols) is illuminated by real local camera surface lighting
+      const inkR = cr / 255;
+      const inkG = cg / 255;
+      const inkB = cb / 255;
+
+      // Multiply ink density with real camera physical lighting
+      outR = camR * (inkR * shadowIntensity + (1 - shadowIntensity));
+      outG = camG * (inkG * shadowIntensity + (1 - shadowIntensity));
+      outB = camB * (inkB * shadowIntensity + (1 - shadowIntensity));
+
+      // Ambient color temperature compensation
+      if (settings.ambientColorMatch && avgR > 0) {
+        outR *= (avgR / 235);
+        outG *= (avgG / 235);
+        outB *= (avgB / 235);
+      }
     } else if (mode === 'overlay') {
       outR = cr < 128 ? (2 * cr * camR) / 255 : 255 - (2 * (255 - cr) * (255 - camR)) / 255;
       outG = cg < 128 ? (2 * cg * camG) / 255 : 255 - (2 * (255 - cg) * (255 - camG)) / 255;
@@ -197,12 +212,20 @@ export function processARFrame(
       outB = cb;
     }
 
-    // Preserve glossy specular highlights
-    if (lum > 0.85 && highlightPreserve > 0) {
-      const spec = (lum - 0.85) * 6.6 * 255 * highlightPreserve;
+    // Preserve glossy specular highlights (shiny light spots on card paper reflect through ink)
+    if (lum > 0.75 && highlightPreserve > 0) {
+      const spec = Math.pow((lum - 0.75) / 0.25, 1.4) * 75 * highlightPreserve;
       outR = Math.min(255, outR + spec);
       outG = Math.min(255, outG + spec);
       outB = Math.min(255, outB + spec);
+    }
+
+    // Micro camera sensor grain blending: subtle film grain to match webcam ISO noise
+    if (mode === 'multiply') {
+      const noise = (Math.random() - 0.5) * 4;
+      outR = Math.max(0, Math.min(255, outR + noise));
+      outG = Math.max(0, Math.min(255, outG + noise));
+      outB = Math.max(0, Math.min(255, outB + noise));
     }
 
     // Alpha blending with edge opacity
@@ -215,3 +238,50 @@ export function processARFrame(
   // 5. Put composite pixels back to video canvas
   videoCanvasCtx.putImageData(videoImgData, minX, minY);
 }
+
+/**
+ * Re-composites an original camera snapshot with a specified card pattern offline
+ */
+export async function recompositeCapturedPhoto(
+  originalDataUrl: string,
+  cardDataUrl: string,
+  corners: QuadCorners,
+  settings: ARSettings
+): Promise<string> {
+  return new Promise((resolve) => {
+    const origImg = new Image();
+    const cardImg = new Image();
+    let loadedCount = 0;
+
+    const checkDone = () => {
+      loadedCount++;
+      if (loadedCount < 2) return;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = origImg.width || 1280;
+      canvas.height = origImg.height || 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(originalDataUrl);
+        return;
+      }
+
+      // Draw raw original photo background
+      ctx.drawImage(origImg, 0, 0);
+
+      // Apply physical light and shadow AR blend
+      processARFrame(ctx, canvas.width, canvas.height, cardImg, corners, settings);
+
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+
+    origImg.onload = checkDone;
+    cardImg.onload = checkDone;
+    origImg.onerror = () => resolve(originalDataUrl);
+    cardImg.onerror = () => resolve(originalDataUrl);
+
+    origImg.src = originalDataUrl;
+    cardImg.src = cardDataUrl;
+  });
+}
+
