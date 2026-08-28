@@ -1,0 +1,10 @@
+{
+  "name": "Remix Remix 全屏扑克牌 AR 相机",
+  "description": "全屏 Web 相机应用，实时取景框对准白色卡片，无需 AI 自动匹配真实环境光影，将 52 张扑克牌印上去。",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
